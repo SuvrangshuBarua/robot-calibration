@@ -92,6 +92,7 @@ public class SplineControlSystem : MonoBehaviour
 
             // Convert world position to local space of this GameObject
             Vector3 localPos = transform.InverseTransformPoint(bone.position);
+            localPos.z = 0f; // Force Z to zero
             
             // Create knot
             BezierKnot knot = new BezierKnot(localPos);
@@ -323,7 +324,7 @@ public class SplineControlSystem : MonoBehaviour
             }
 
             // Calculate rotation based on tangent direction
-            if (i < spline.Count - 1)
+            /*if (i < spline.Count - 1)
             {
                 // Use forward tangent for rotation
                 Vector3 tangent = transform.TransformDirection(knot.TangentOut);
@@ -331,7 +332,7 @@ public class SplineControlSystem : MonoBehaviour
                 {
                     bone.rotation = Quaternion.LookRotation(tangent, transform.up);
                 }
-            }
+            }*/
         }
     }
 
@@ -350,6 +351,7 @@ public class SplineControlSystem : MonoBehaviour
             if (bone == null) continue;
 
             Vector3 localPos = transform.InverseTransformPoint(bone.position);
+            localPos.z = 0f; // Force Z to zero
             BezierKnot knot = spline[i];
             knot.Position = localPos;
             spline.SetKnot(i, knot);
@@ -375,8 +377,9 @@ public class SplineControlSystem : MonoBehaviour
         Vector3 localPos = transform.InverseTransformPoint(worldPosition);
         BezierKnot knot = spline[knotIndex];
         
-        // Update position
+        // Update position (keeping Z at zero)
         Vector3 positionDelta = localPos - (Vector3)knot.Position;
+        localPos.z = 0f; // Force Z to zero
         knot.Position = localPos;
         
         // Move tangents with the knot to maintain curve shape
@@ -407,7 +410,7 @@ public class SplineControlSystem : MonoBehaviour
                     Vector3 tangent = transform.TransformDirection(knot.TangentOut);
                     if (tangent != Vector3.zero)
                     {
-                        bone.rotation = Quaternion.LookRotation(tangent, transform.up);
+                        //bone.rotation = Quaternion.LookRotation(tangent, transform.up);
                     }
                 }
             }
