@@ -12,14 +12,16 @@ public class SplineControlSystem : MonoBehaviour
     [Header("Spline Settings")]
     [SerializeField] private bool autoUpdateSpline = true;
     [SerializeField] private TangentMode tangentMode = TangentMode.AutoSmooth;
-    [SerializeField] private float tangentStrength = 0.33f; // Control smoothness
+    [SerializeField] private float tangentStrength = 0.33f;
     
     [Header("Runtime Manipulation")]
     [SerializeField] private bool enableRuntimeManipulation = true;
-    [SerializeField] private float handleSize = 0.3f;
-    [SerializeField] private Color handleColor = Color.yellow;
-    [SerializeField] private Color selectedHandleColor = Color.green;
-    [SerializeField] private int handleLayer = 0; // Default layer
+    [SerializeField] private float handleSize = 0.5f;
+    [SerializeField] private Sprite handleSprite; // Assign in inspector
+    [SerializeField] private Color handleColor = new Color(1f, 1f, 0f, 0.7f);
+    [SerializeField] private Color selectedHandleColor = new Color(0f, 1f, 0f, 0.7f);
+    [SerializeField] private int sortingOrder = 100; // Higher values render on top
+    [SerializeField] private string sortingLayerName = "Default";
     [SerializeField] private bool debugMode = false;
     
     private SplineContainer splineContainer;
@@ -28,6 +30,11 @@ public class SplineControlSystem : MonoBehaviour
     private List<GameObject> handleObjects = new List<GameObject>();
     private int selectedHandleIndex = -1;
     private Camera mainCamera;
+    private Plane dragPlane; // For 2D dragging
+    
+    // Store original positions for reset functionality
+    private Dictionary<int, Vector3> originalKnotPositions = new Dictionary<int, Vector3>();
+    private Dictionary<int, BezierKnot> originalKnotData = new Dictionary<int, BezierKnot>();
 
     void Start()
     {
@@ -38,6 +45,9 @@ public class SplineControlSystem : MonoBehaviour
         {
             Debug.LogError("No main camera found! Make sure your camera is tagged as MainCamera");
         }
+        
+        // Create drag plane for 2D manipulation
+        dragPlane = new Plane(Vector3.forward, Vector3.zero);
         
         InitializeSplineFromBones();
         
@@ -62,16 +72,12 @@ public class SplineControlSystem : MonoBehaviour
             HandleInput();
         }
         
-        // Always update bones from spline when manipulation is enabled
         if (autoUpdateSpline || enableRuntimeManipulation)
         {
             UpdateBonesFromSpline();
         }
     }
 
-    /// <summary>
-    /// Creates a Bezier spline connecting all bone roots
-    /// </summary>
     public void InitializeSplineFromBones()
     {
         if (boneRoots.Count < 2)
@@ -80,31 +86,26 @@ public class SplineControlSystem : MonoBehaviour
             return;
         }
 
-        // Create new spline
         spline = new Spline();
         knotToBoneMap.Clear();
+        originalKnotPositions.Clear();
+        originalKnotData.Clear();
 
-        // Add knots for each bone root
         for (int i = 0; i < boneRoots.Count; i++)
         {
             Transform bone = boneRoots[i];
             if (bone == null) continue;
 
-            // Convert world position to local space of this GameObject
             Vector3 localPos = transform.InverseTransformPoint(bone.position);
-            localPos.z = 0f; // Force Z to zero
+            localPos.z = 0f;
             
-            // Create knot
             BezierKnot knot = new BezierKnot(localPos);
             
-            // Calculate smooth tangents based on neighboring points
             if (i > 0 && i < boneRoots.Count - 1)
             {
-                // Get previous and next positions
                 Vector3 prevPos = transform.InverseTransformPoint(boneRoots[i - 1].position);
                 Vector3 nextPos = transform.InverseTransformPoint(boneRoots[i + 1].position);
                 
-                // Calculate tangent direction (smoothly pointing from prev to next)
                 Vector3 tangentDir = (nextPos - prevPos).normalized;
                 float distance = Vector3.Distance(prevPos, nextPos) * tangentStrength;
                 
@@ -113,7 +114,6 @@ public class SplineControlSystem : MonoBehaviour
             }
             else if (i == 0 && boneRoots.Count > 1)
             {
-                // First knot - tangent points toward next
                 Vector3 nextPos = transform.InverseTransformPoint(boneRoots[i + 1].position);
                 Vector3 tangentDir = (nextPos - localPos).normalized;
                 float distance = Vector3.Distance(localPos, nextPos) * tangentStrength;
@@ -123,7 +123,6 @@ public class SplineControlSystem : MonoBehaviour
             }
             else if (i == boneRoots.Count - 1 && i > 0)
             {
-                // Last knot - tangent points from previous
                 Vector3 prevPos = transform.InverseTransformPoint(boneRoots[i - 1].position);
                 Vector3 tangentDir = (localPos - prevPos).normalized;
                 float distance = Vector3.Distance(prevPos, localPos) * tangentStrength;
@@ -132,24 +131,21 @@ public class SplineControlSystem : MonoBehaviour
                 knot.TangentOut = tangentDir * distance * 0.5f;
             }
             
-            spline.Add(knot, TangentMode.AutoSmooth); // Use manual for custom tangents
-            
-            // Map knot index to bone
+            spline.Add(knot, TangentMode.AutoSmooth);
             knotToBoneMap[i] = bone;
+            
+            // Store original position and knot data
+            originalKnotPositions[i] = bone.position;
+            originalKnotData[i] = knot;
         }
 
-        // Set the spline to the container
         splineContainer.Spline = spline;
         
         Debug.Log($"Spline created with {spline.Count} knots");
     }
 
-    /// <summary>
-    /// Creates visual handles for runtime manipulation
-    /// </summary>
     private void CreateHandles()
     {
-        // Clear existing handles
         foreach (GameObject handle in handleObjects)
         {
             if (handle != null) Destroy(handle);
@@ -164,48 +160,89 @@ public class SplineControlSystem : MonoBehaviour
 
         if (debugMode)
         {
-            Debug.Log($"Creating {spline.Count} handles");
+            Debug.Log($"Creating {spline.Count} sprite handles");
         }
 
-        // Create a handle for each knot
         for (int i = 0; i < spline.Count; i++)
         {
-            GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            handle.name = $"SplineHandle_{i}";
+            GameObject handle = new GameObject($"SplineHandle_{i}");
             handle.transform.SetParent(transform);
-            handle.transform.localScale = Vector3.one * handleSize;
-            handle.layer = handleLayer;
             
-            // Add a SplineHandle component to track index
+            // Add SpriteRenderer
+            SpriteRenderer spriteRenderer = handle.AddComponent<SpriteRenderer>();
+            
+            // Use provided sprite or create a default circle sprite
+            if (handleSprite != null)
+            {
+                spriteRenderer.sprite = handleSprite;
+            }
+            else
+            {
+                // Create a simple circle sprite if none provided
+                spriteRenderer.sprite = CreateCircleSprite(64);
+            }
+            
+            spriteRenderer.color = handleColor;
+            spriteRenderer.sortingLayerName = sortingLayerName;
+            spriteRenderer.sortingOrder = sortingOrder;
+            
+            // Set size
+            handle.transform.localScale = Vector3.one * handleSize;
+            
+            // Add collider for mouse interaction (2D)
+            CircleCollider2D collider = handle.AddComponent<CircleCollider2D>();
+            collider.radius = 0.5f; // Matches sprite size
+            
+            // Add SplineHandle component
             SplineHandle handleScript = handle.AddComponent<SplineHandle>();
             handleScript.Initialize(this, i);
             
-            // Set color with unlit shader
-            Renderer renderer = handle.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                Material mat = new Material(Shader.Find("Unlit/Color"));
-                mat.color = handleColor;
-                renderer.material = mat;
-            }
-            
             handleObjects.Add(handle);
-            
-            // Update position
             UpdateHandlePosition(i);
             
             if (debugMode)
             {
-                Debug.Log($"Created handle {i} at position: {handle.transform.position}");
+                Debug.Log($"Created sprite handle {i} at position: {handle.transform.position}");
             }
         }
         
-        Debug.Log($"Successfully created {handleObjects.Count} handle spheres");
+        Debug.Log($"Successfully created {handleObjects.Count} sprite handles");
     }
 
-    /// <summary>
-    /// Updates handle position based on spline knot
-    /// </summary>
+    private Sprite CreateCircleSprite(int resolution)
+    {
+        Texture2D texture = new Texture2D(resolution, resolution);
+        Color[] pixels = new Color[resolution * resolution];
+        
+        Vector2 center = new Vector2(resolution / 2f, resolution / 2f);
+        float radius = resolution / 2f;
+        
+        for (int y = 0; y < resolution; y++)
+        {
+            for (int x = 0; x < resolution; x++)
+            {
+                Vector2 pos = new Vector2(x, y);
+                float distance = Vector2.Distance(pos, center);
+                
+                if (distance <= radius)
+                {
+                    // Create smooth anti-aliased edge
+                    float alpha = 1f - Mathf.Clamp01((distance - radius + 2) / 2f);
+                    pixels[y * resolution + x] = new Color(1f, 1f, 1f, alpha);
+                }
+                else
+                {
+                    pixels[y * resolution + x] = Color.clear;
+                }
+            }
+        }
+        
+        texture.SetPixels(pixels);
+        texture.Apply();
+        
+        return Sprite.Create(texture, new Rect(0, 0, resolution, resolution), new Vector2(0.5f, 0.5f), resolution);
+    }
+
     private void UpdateHandlePosition(int index)
     {
         if (index >= handleObjects.Count || handleObjects[index] == null) return;
@@ -213,31 +250,25 @@ public class SplineControlSystem : MonoBehaviour
 
         BezierKnot knot = spline[index];
         Vector3 worldPos = transform.TransformPoint(knot.Position);
+        worldPos.z = 0f; // Keep sprites at z=0
         handleObjects[index].transform.position = worldPos;
     }
 
-    /// <summary>
-    /// Handles mouse input for dragging handles
-    /// </summary>
     private void HandleInput()
     {
-        if (mainCamera == null)
-        {
-            Debug.LogWarning("Main camera not found!");
-            return;
-        }
+        if (mainCamera == null) return;
 
-        // Mouse down - select handle
+        // Mouse down - select handle (using 2D raycasting)
         if (Input.GetMouseButtonDown(0))
         {
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
+            Vector2 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
 
-            if (Physics.Raycast(ray, out hit))
+            if (hit.collider != null)
             {
                 if (debugMode)
                 {
-                    Debug.Log($"Raycast hit: {hit.collider.gameObject.name}");
+                    Debug.Log($"2D Raycast hit: {hit.collider.gameObject.name}");
                 }
                 
                 SplineHandle handleScript = hit.collider.GetComponent<SplineHandle>();
@@ -264,42 +295,32 @@ public class SplineControlSystem : MonoBehaviour
         // Mouse drag - move selected handle
         if (Input.GetMouseButton(0) && selectedHandleIndex >= 0)
         {
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            
-            // Project to plane parallel to camera at handle's distance
-            Vector3 handlePos = handleObjects[selectedHandleIndex].transform.position;
-            float distance = Vector3.Dot(handlePos - mainCamera.transform.position, mainCamera.transform.forward);
-            Vector3 worldPos = ray.GetPoint(distance);
+            Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+            mouseWorldPos.z = 0f; // Keep in 2D plane
             
             if (debugMode)
             {
-                Debug.Log($"Dragging handle {selectedHandleIndex} to {worldPos}");
+                Debug.Log($"Dragging handle {selectedHandleIndex} to {mouseWorldPos}");
             }
             
-            SetKnotPosition(selectedHandleIndex, worldPos);
+            SetKnotPosition(selectedHandleIndex, mouseWorldPos);
         }
     }
 
-    /// <summary>
-    /// Updates handle colors based on selection
-    /// </summary>
     private void UpdateHandleColors()
     {
         for (int i = 0; i < handleObjects.Count; i++)
         {
             if (handleObjects[i] == null) continue;
             
-            Renderer renderer = handleObjects[i].GetComponent<Renderer>();
-            if (renderer != null && renderer.material != null)
+            SpriteRenderer spriteRenderer = handleObjects[i].GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null)
             {
-                renderer.material.color = (i == selectedHandleIndex) ? selectedHandleColor : handleColor;
+                spriteRenderer.color = (i == selectedHandleIndex) ? selectedHandleColor : handleColor;
             }
         }
     }
 
-    /// <summary>
-    /// Updates bone positions and rotations based on spline knot positions
-    /// </summary>
     public void UpdateBonesFromSpline()
     {
         if (spline == null || spline.Count == 0) return;
@@ -311,34 +332,18 @@ public class SplineControlSystem : MonoBehaviour
             Transform bone = knotToBoneMap[i];
             if (bone == null) continue;
 
-            // Get knot in world space
             BezierKnot knot = spline[i];
             Vector3 worldPos = transform.TransformPoint(knot.Position);
             
-            // Update bone position
             bone.position = worldPos;
             
             if (debugMode && i == selectedHandleIndex)
             {
                 Debug.Log($"Bone {i} updated to position: {worldPos}");
             }
-
-            // Calculate rotation based on tangent direction
-            /*if (i < spline.Count - 1)
-            {
-                // Use forward tangent for rotation
-                Vector3 tangent = transform.TransformDirection(knot.TangentOut);
-                if (tangent != Vector3.zero)
-                {
-                    bone.rotation = Quaternion.LookRotation(tangent, transform.up);
-                }
-            }*/
         }
     }
 
-    /// <summary>
-    /// Updates spline knots based on current bone positions
-    /// </summary>
     public void UpdateSplineFromBones()
     {
         if (spline == null) return;
@@ -351,13 +356,12 @@ public class SplineControlSystem : MonoBehaviour
             if (bone == null) continue;
 
             Vector3 localPos = transform.InverseTransformPoint(bone.position);
-            localPos.z = 0f; // Force Z to zero
+            localPos.z = 0f;
             BezierKnot knot = spline[i];
             knot.Position = localPos;
             spline.SetKnot(i, knot);
         }
         
-        // Update handle positions
         if (enableRuntimeManipulation)
         {
             for (int i = 0; i < spline.Count; i++)
@@ -367,9 +371,6 @@ public class SplineControlSystem : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Manually set a knot position
-    /// </summary>
     public void SetKnotPosition(int knotIndex, Vector3 worldPosition)
     {
         if (spline == null || knotIndex >= spline.Count) return;
@@ -377,61 +378,41 @@ public class SplineControlSystem : MonoBehaviour
         Vector3 localPos = transform.InverseTransformPoint(worldPosition);
         BezierKnot knot = spline[knotIndex];
         
-        // Update position (keeping Z at zero)
         Vector3 positionDelta = localPos - (Vector3)knot.Position;
-        localPos.z = 0f; // Force Z to zero
+        localPos.z = 0f;
         knot.Position = localPos;
         
-        // Move tangents with the knot to maintain curve shape
         knot.TangentIn += (float3)positionDelta;
         knot.TangentOut += (float3)positionDelta;
         
         spline.SetKnot(knotIndex, knot);
         
-        // Recalculate tangents for smooth curve
         RecalculateTangentsForKnot(knotIndex);
         
-        // Force update the spline container
         splineContainer.Spline = spline;
         
         UpdateHandlePosition(knotIndex);
         
-        // Immediately update the specific bone
         if (knotToBoneMap.ContainsKey(knotIndex))
         {
             Transform bone = knotToBoneMap[knotIndex];
             if (bone != null)
             {
                 bone.position = worldPosition;
-                
-                // Update rotation based on tangent
-                if (knotIndex < spline.Count - 1)
-                {
-                    Vector3 tangent = transform.TransformDirection(knot.TangentOut);
-                    if (tangent != Vector3.zero)
-                    {
-                        //bone.rotation = Quaternion.LookRotation(tangent, transform.up);
-                    }
-                }
             }
         }
     }
     
-    /// <summary>
-    /// Recalculate tangents for a specific knot and its neighbors for smooth curves
-    /// </summary>
     private void RecalculateTangentsForKnot(int knotIndex)
     {
         if (spline == null || knotIndex >= spline.Count) return;
         
-        // Recalculate for current and neighboring knots
         for (int i = Mathf.Max(0, knotIndex - 1); i <= Mathf.Min(spline.Count - 1, knotIndex + 1); i++)
         {
             BezierKnot knot = spline[i];
             
             if (i > 0 && i < spline.Count - 1)
             {
-                // Middle knot - smooth between neighbors
                 Vector3 prevPos = spline[i - 1].Position;
                 Vector3 nextPos = spline[i + 1].Position;
                 Vector3 tangentDir = (nextPos - prevPos).normalized;
@@ -444,10 +425,9 @@ public class SplineControlSystem : MonoBehaviour
             }
             else if (i == 0 && spline.Count > 1)
             {
-                // First knot
                 Vector3 nextPos = spline[i + 1].Position;
                 Vector3 tangentDir = ((float3)nextPos - knot.Position);
-                tangentDir = tangentDir.normalized;
+                tangentDir.Normalize();
                 float distance = Vector3.Distance(knot.Position, nextPos) * tangentStrength;
                 
                 knot.TangentOut = tangentDir * distance;
@@ -455,10 +435,9 @@ public class SplineControlSystem : MonoBehaviour
             }
             else if (i == spline.Count - 1 && i > 0)
             {
-                // Last knot
                 Vector3 prevPos = spline[i - 1].Position;
                 Vector3 tangentDir = (knot.Position - (float3)prevPos);
-                tangentDir = tangentDir.normalized;
+                tangentDir.Normalize();
                 float distance = Vector3.Distance(prevPos, knot.Position) * tangentStrength;
                 
                 knot.TangentIn = -tangentDir * distance;
@@ -469,9 +448,6 @@ public class SplineControlSystem : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Add a new bone to the spline
-    /// </summary>
     public void AddBone(Transform bone)
     {
         if (bone == null) return;
@@ -490,9 +466,6 @@ public class SplineControlSystem : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Refresh tangent mode for smoother curves
-    /// </summary>
     public void RecalculateTangents()
     {
         if (spline == null) return;
@@ -505,9 +478,6 @@ public class SplineControlSystem : MonoBehaviour
         splineContainer.Spline = spline;
     }
 
-    /// <summary>
-    /// Toggle runtime manipulation on/off
-    /// </summary>
     public void SetRuntimeManipulation(bool enabled)
     {
         enableRuntimeManipulation = enabled;
@@ -526,16 +496,145 @@ public class SplineControlSystem : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Reset all knots to their original positions
+    /// </summary>
+    public void ResetToOriginalPositions()
+    {
+        if (spline == null || originalKnotData.Count == 0)
+        {
+            Debug.LogWarning("No original positions stored to reset to!");
+            return;
+        }
+
+        if (debugMode)
+        {
+            Debug.Log("Resetting all knots to original positions...");
+        }
+
+        // Reset each knot to its original state
+        for (int i = 0; i < spline.Count; i++)
+        {
+            if (originalKnotData.ContainsKey(i))
+            {
+                BezierKnot originalKnot = originalKnotData[i];
+                spline.SetKnot(i, originalKnot);
+                
+                // Update the corresponding bone
+                if (knotToBoneMap.ContainsKey(i) && originalKnotPositions.ContainsKey(i))
+                {
+                    Transform bone = knotToBoneMap[i];
+                    if (bone != null)
+                    {
+                        bone.position = originalKnotPositions[i];
+                    }
+                }
+                
+                // Update handle position
+                if (enableRuntimeManipulation)
+                {
+                    UpdateHandlePosition(i);
+                }
+            }
+        }
+
+        // Force update the spline container
+        splineContainer.Spline = spline;
+        
+        if (debugMode)
+        {
+            Debug.Log("Reset complete!");
+        }
+    }
+
+    /// <summary>
+    /// Reset a specific knot to its original position
+    /// </summary>
+    public void ResetKnotToOriginal(int knotIndex)
+    {
+        if (spline == null || knotIndex >= spline.Count)
+        {
+            Debug.LogWarning($"Invalid knot index: {knotIndex}");
+            return;
+        }
+
+        if (!originalKnotData.ContainsKey(knotIndex))
+        {
+            Debug.LogWarning($"No original data stored for knot {knotIndex}");
+            return;
+        }
+
+        if (debugMode)
+        {
+            Debug.Log($"Resetting knot {knotIndex} to original position...");
+        }
+
+        // Reset the knot
+        BezierKnot originalKnot = originalKnotData[knotIndex];
+        spline.SetKnot(knotIndex, originalKnot);
+
+        // Update the corresponding bone
+        if (knotToBoneMap.ContainsKey(knotIndex) && originalKnotPositions.ContainsKey(knotIndex))
+        {
+            Transform bone = knotToBoneMap[knotIndex];
+            if (bone != null)
+            {
+                bone.position = originalKnotPositions[knotIndex];
+            }
+        }
+
+        // Update handle position
+        if (enableRuntimeManipulation)
+        {
+            UpdateHandlePosition(knotIndex);
+        }
+
+        // Force update the spline container
+        splineContainer.Spline = spline;
+    }
+
+    /// <summary>
+    /// Save current positions as new original positions
+    /// </summary>
+    public void SaveCurrentAsOriginal()
+    {
+        if (spline == null)
+        {
+            Debug.LogWarning("No spline to save!");
+            return;
+        }
+
+        originalKnotPositions.Clear();
+        originalKnotData.Clear();
+
+        for (int i = 0; i < spline.Count; i++)
+        {
+            originalKnotData[i] = spline[i];
+            
+            if (knotToBoneMap.ContainsKey(i))
+            {
+                Transform bone = knotToBoneMap[i];
+                if (bone != null)
+                {
+                    originalKnotPositions[i] = bone.position;
+                }
+            }
+        }
+
+        if (debugMode)
+        {
+            Debug.Log($"Saved current state as original for {originalKnotData.Count} knots");
+        }
+    }
+
     void OnDestroy()
     {
-        // Clean up handles
         foreach (GameObject handle in handleObjects)
         {
             if (handle != null) Destroy(handle);
         }
     }
 
-    // Gizmo visualization
     void OnDrawGizmos()
     {
         if (boneRoots == null || boneRoots.Count == 0) return;
@@ -550,9 +649,7 @@ public class SplineControlSystem : MonoBehaviour
         }
     }
 }
-/// <summary>
-/// Helper component attached to handle objects
-/// </summary>
+
 public class SplineHandle : MonoBehaviour
 {
     public SplineControlSystem Controller { get; private set; }
