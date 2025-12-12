@@ -17,18 +17,12 @@ MonoBehaviour:
       speakerName: Operator
       text: 
     choices:
-    - choiceText: 'Player: My mom doesn''t let me play with my toys until I clean
-        up, but I really don''t feel like it! '
+    - choiceText: 'My mom doesn''t let me play with my toys until I clean up, but
+        I really don''t feel like it! '
       response:
         speakerName: 'AI '
-        text: 'Cleaning up first can actually make playtime smoother and keep
-
-          your
+        text: Cleaning up first can actually make playtime smoother and keep your
           toys from getting lost or broken. Try doing it quickly in small parts so
-
-          you
-          can get back to having fun sooner.
-
-'
-      nextDialogue: {fileID: 0}
+          you can get back to having fun sooner.
+      nextDialogue: {fileID: 11400000, guid: 64da510846b8a76419546894adfdcde9, type: 2}
       endDialogue: 0

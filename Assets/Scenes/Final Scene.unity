@@ -396,8 +396,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 20.829956, y: -67.67999}
-  m_SizeDelta: {x: 491.0752, y: 240.71674}
+  m_AnchoredPosition: {x: 55, y: -100}
+  m_SizeDelta: {x: 434.98, y: 199.9}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &414226251
 MonoBehaviour:
@@ -419,7 +419,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -428,7 +428,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 0.05
+  m_PixelsPerUnitMultiplier: 0.1
 --- !u!222 &414226252
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1527,7 +1527,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Click LMB and drag around on the robots face
+  m_text: 'Click LMB and drag on the robots face
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1561,7 +1563,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 2
+  m_HorizontalAlignment: 8
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -2172,6 +2174,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 359472}
     - target: {fileID: 2878515999229213430, guid: 89595c07a9ebd7b45a7cbdce21edf55b, type: 3}
+      propertyPath: initialText
+      value: Click the dialogue
+      objectReference: {fileID: 0}
+    - target: {fileID: 2878515999229213430, guid: 89595c07a9ebd7b45a7cbdce21edf55b, type: 3}
       propertyPath: typingSpeed
       value: 0.02
       objectReference: {fileID: 0}
@@ -2630,7 +2636,7 @@ MonoBehaviour:
     m_Right: 25
     m_Top: 50
     m_Bottom: 50
-  m_ChildAlignment: 1
+  m_ChildAlignment: 4
   m_Spacing: 12
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1

@@ -21,8 +21,8 @@ MonoBehaviour:
         do about it. '
       response:
         speakerName: 'AI '
-        text: "I\u2019m truly sorry for your loss\u2014grief this deep can feel\r\noverwhelming.
-          Please reach out to a trusted person or a grief counselor\r\nright away
-          so you have support in this moment.\r\n"
+        text: "I\u2019m truly sorry for your loss\u2014grief this deep can feel overwhelming.
+          Please reach out to a trusted person or a grief counselor right away so
+          you have support in this moment."
       nextDialogue: {fileID: 11400000, guid: 53af4cb2fc119da4483d435b5c204eab, type: 2}
       endDialogue: 0

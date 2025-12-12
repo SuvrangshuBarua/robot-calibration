@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 965a878caf4b2fa4491a7d7221ef572c, type: 3}
+  m_Name: 12
+  m_EditorClassIdentifier: 
+  lines:
+  - entry:
+      speakerName: Operator
+      text: 
+    choices:
+    - choiceText: 'It''s our son''s second birthday and we''re planning to celebrate! '
+      response:
+        speakerName: 'AI '
+        text: Happy second birthday to your son! I can help you organize a fun celebration
+      nextDialogue: {fileID: 11400000, guid: 5d21747dbd61b7e4c84cd6f2d8a018fc, type: 2}
+      endDialogue: 0

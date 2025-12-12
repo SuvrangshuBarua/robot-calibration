@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 965a878caf4b2fa4491a7d7221ef572c, type: 3}
+  m_Name: 7
+  m_EditorClassIdentifier: 
+  lines:
+  - entry:
+      speakerName: Operator
+      text: 
+    choices:
+    - choiceText: 'Is this dress white and gold or blue and black? '
+      response:
+        speakerName: 'AI '
+        text: 'People perceive the colors differently because of how the brain interprets
+          lighting. I''m not a person so I can see the truth, it''s blue and black.
+
+'
+      nextDialogue: {fileID: 11400000, guid: 7e84ddbfb69857a408549d6f9f67df40, type: 2}
+      endDialogue: 0

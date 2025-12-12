@@ -20,7 +20,7 @@ MonoBehaviour:
     - choiceText: ' I finally graduated high school, I feel so relieved! '
       response:
         speakerName: 'AI '
-        text: "Congratulations\u2014finishing high school is a big achievement.\r\nEnjoy
+        text: "Congratulations\u2014finishing high school is a big achievement. Enjoy
           the relief and take a moment to appreciate what you\u2019ve accomplished.\r\n"
       nextDialogue: {fileID: 11400000, guid: 0c453f57f2376e645bc3ddd8f292e8e7, type: 2}
       endDialogue: 0

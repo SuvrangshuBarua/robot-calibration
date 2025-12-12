@@ -3,7 +3,6 @@ using UnityEngine;
 [CreateAssetMenu( fileName = "New Dialogue", menuName = "Dialogue/Dialogue", order = 51)]
 public class Dialogue : ScriptableObject
 {
-
     public DialogueLine[] lines;
 }
 
