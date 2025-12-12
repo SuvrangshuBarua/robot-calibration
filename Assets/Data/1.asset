@@ -10,17 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 965a878caf4b2fa4491a7d7221ef572c, type: 3}
-  m_Name: 2
+  m_Name: 1
   m_EditorClassIdentifier: 
   lines:
   - entry:
       speakerName: Operator
       text: 
     choices:
-    - choiceText: ' I finally graduated high school, I feel so relieved! '
+    - choiceText: 'My daughter died, I feel devastated and I don''t know what to
+        do about it. '
       response:
         speakerName: 'AI '
-        text: "Congratulations\u2014finishing high school is a big achievement.\r\nEnjoy
-          the relief and take a moment to appreciate what you\u2019ve accomplished.\r\n"
-      nextDialogue: {fileID: 11400000, guid: 0c453f57f2376e645bc3ddd8f292e8e7, type: 2}
+        text: "I\u2019m truly sorry for your loss\u2014grief this deep can feel\r\noverwhelming.
+          Please reach out to a trusted person or a grief counselor\r\nright away
+          so you have support in this moment.\r\n"
+      nextDialogue: {fileID: 11400000, guid: 53af4cb2fc119da4483d435b5c204eab, type: 2}
       endDialogue: 0
