@@ -40,6 +40,7 @@ public class DialogueSystem : MonoBehaviour
     {
         float elapsed = 0f;
         fillImage.fillAmount = 0f;
+        splineControlSystem.SetInvisible();
 
         while (elapsed < fillDuration)
         {
@@ -50,6 +51,7 @@ public class DialogueSystem : MonoBehaviour
 
         fillImage.fillAmount = 0f;
         calibrateButtonPressed = false;
+        splineControlSystem.SetVisible();
         splineControlSystem.ResetToOriginalPositions();
     }
 

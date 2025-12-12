@@ -35,6 +35,7 @@ public class SplineControlSystem : MonoBehaviour
     // Store original positions for reset functionality
     private Dictionary<int, Vector3> originalKnotPositions = new Dictionary<int, Vector3>();
     private Dictionary<int, BezierKnot> originalKnotData = new Dictionary<int, BezierKnot>();
+    private float handleOpacity = 0.0f;
 
     void Start()
     {
@@ -191,7 +192,7 @@ public class SplineControlSystem : MonoBehaviour
             
             // Add collider for mouse interaction (2D)
             CircleCollider2D collider = handle.AddComponent<CircleCollider2D>();
-            collider.radius = 0.5f; // Matches sprite size
+            collider.radius = 1; // Matches sprite size
             
             // Add SplineHandle component
             SplineHandle handleScript = handle.AddComponent<SplineHandle>();
@@ -309,6 +310,7 @@ public class SplineControlSystem : MonoBehaviour
 
     private void UpdateHandleColors()
     {
+        handleOpacity = handleColor.a;
         for (int i = 0; i < handleObjects.Count; i++)
         {
             if (handleObjects[i] == null) continue;
@@ -499,6 +501,21 @@ public class SplineControlSystem : MonoBehaviour
     /// <summary>
     /// Reset all knots to their original positions
     /// </summary>
+    /// 
+
+    public void SetInvisible()
+    {
+        handleColor.a = 0;
+        UpdateHandleColors();
+    }
+
+    public void SetVisible()
+    {
+        handleColor.a = 0.06f;
+        UpdateHandleColors();
+    }
+
+
     public void ResetToOriginalPositions()
     {
         if (spline == null || originalKnotData.Count == 0)
