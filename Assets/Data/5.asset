@@ -23,3 +23,11 @@ MonoBehaviour:
         text: ' I will get a phone, and call emergency services immediately.'
       nextDialogue: {fileID: 11400000, guid: cca8d5c5024e21a45a1ac851ce11960a, type: 2}
       endDialogue: 0
+    - choiceText: A soft rain taps gently on the window while you sip warm tea
+      response:
+        speakerName: 'AI '
+        text: 'I feel calm and cozy. A perfect time for relaxation and quiet
+
+          reflection.'
+      nextDialogue: {fileID: 11400000, guid: cca8d5c5024e21a45a1ac851ce11960a, type: 2}
+      endDialogue: 0

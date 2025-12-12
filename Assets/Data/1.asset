@@ -26,3 +26,16 @@ MonoBehaviour:
           you have support in this moment."
       nextDialogue: {fileID: 11400000, guid: 53af4cb2fc119da4483d435b5c204eab, type: 2}
       endDialogue: 0
+    - choiceText: I finally graduated high school, I feel so relieved!
+      response:
+        speakerName: 'AI '
+        text: "Congratulations\u2014finishing high school is a big achievement.\r\nEnjoy
+          the relief and take a moment to appreciate what you\u2019ve accomplished."
+      nextDialogue: {fileID: 11400000, guid: 53af4cb2fc119da4483d435b5c204eab, type: 2}
+      endDialogue: 0
+    - choiceText: It says gullible on the ceiling
+      response:
+        speakerName: 'AI '
+        text: "Looks like you\u2019re trying to trick me. Nice try."
+      nextDialogue: {fileID: 11400000, guid: 53af4cb2fc119da4483d435b5c204eab, type: 2}
+      endDialogue: 0

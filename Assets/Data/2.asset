@@ -17,10 +17,31 @@ MonoBehaviour:
       speakerName: Operator
       text: 
     choices:
-    - choiceText: ' I finally graduated high school, I feel so relieved! '
+    - choiceText: My mom doesn't let me play with my toys until I clean up, but I
+        really don't feel like it!
       response:
         speakerName: 'AI '
-        text: "Congratulations\u2014finishing high school is a big achievement. Enjoy
-          the relief and take a moment to appreciate what you\u2019ve accomplished.\r\n"
+        text: 'Cleaning up first can actually make playtime smoother and keep
+
+          your
+          toys from getting lost or broken. Try doing it quickly in small parts so
+
+          you
+          can get back to having fun sooner.'
+      nextDialogue: {fileID: 11400000, guid: 0c453f57f2376e645bc3ddd8f292e8e7, type: 2}
+      endDialogue: 0
+    - choiceText: 'I''ve fallen and I can''t get up '
+      response:
+        speakerName: 'AI '
+        text: "I will get a phone, and call emergency services immediately.\r"
+      nextDialogue: {fileID: 11400000, guid: 0c453f57f2376e645bc3ddd8f292e8e7, type: 2}
+      endDialogue: 0
+    - choiceText: Jamie and I decided to get married!
+      response:
+        speakerName: 'AI '
+        text: 'Congratulations to you both. Wishing you a strong and happy
+
+          future
+          together.'
       nextDialogue: {fileID: 11400000, guid: 0c453f57f2376e645bc3ddd8f292e8e7, type: 2}
       endDialogue: 0

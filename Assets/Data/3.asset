@@ -17,12 +17,26 @@ MonoBehaviour:
       speakerName: Operator
       text: 
     choices:
-    - choiceText: 'My mom doesn''t let me play with my toys until I clean up, but
-        I really don''t feel like it! '
+    - choiceText: ' A warm breeze carries the scent of your favorite flowers '
       response:
         speakerName: 'AI '
-        text: Cleaning up first can actually make playtime smoother and keep your
-          toys from getting lost or broken. Try doing it quickly in small parts so
-          you can get back to having fun sooner.
+        text: 'Such a peaceful moment. It creates an instant sense of calm
+
+          and
+          familiarity.'
+      nextDialogue: {fileID: 11400000, guid: 64da510846b8a76419546894adfdcde9, type: 2}
+      endDialogue: 0
+    - choiceText: 'After waiting for hours, they canceled the meeting without even
+        a call! '
+      response:
+        speakerName: 'AI '
+        text: "That\u2019s frustrating and disrespectful of your time. You might\r\nconsider
+          addressing it to prevent it from happening again."
+      nextDialogue: {fileID: 11400000, guid: 64da510846b8a76419546894adfdcde9, type: 2}
+      endDialogue: 0
+    - choiceText: "It\u2019s dangerous to go alone! Take this. "
+      response:
+        speakerName: 'AI '
+        text: " A timeless line. I\u2019ll take it.\r"
       nextDialogue: {fileID: 11400000, guid: 64da510846b8a76419546894adfdcde9, type: 2}
       endDialogue: 0

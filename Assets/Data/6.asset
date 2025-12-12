@@ -17,9 +17,24 @@ MonoBehaviour:
       speakerName: Operator
       text: 
     choices:
-    - choiceText: "It\u2019s dangerous to go alone! Take this. "
+    - choiceText: "It\u2019s not fair how you\u2019ve been treated, and you don\u2019t
+        deserve it."
       response:
         speakerName: 'AI '
-        text: "A timeless line. I\u2019ll take it."
+        text: "I feel hurt that I\u2019ve been treated unfairly. I deserve respect,\r\nand
+          I should set boundaries or seek support"
+      nextDialogue: {fileID: 11400000, guid: cf59d0af7c8188e4ca0d2b05f68a7058, type: 2}
+      endDialogue: 0
+    - choiceText: Someone took credit for the work you spent weeks on.
+      response:
+        speakerName: 'AI '
+        text: " That\u2019s frustrating and unfair. I should document my work and\r\naddress
+          this with the appropriate person or authority.\r"
+      nextDialogue: {fileID: 11400000, guid: cf59d0af7c8188e4ca0d2b05f68a7058, type: 2}
+      endDialogue: 0
+    - choiceText: 'Are you a robot? '
+      response:
+        speakerName: 'AI '
+        text: "No, I'm John\r"
       nextDialogue: {fileID: 11400000, guid: cf59d0af7c8188e4ca0d2b05f68a7058, type: 2}
       endDialogue: 0
