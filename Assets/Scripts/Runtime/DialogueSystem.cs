@@ -4,6 +4,8 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using UnityEngine.Networking;
+using System.Text;
 
 public class DialogueSystem : MonoBehaviour
 {    
@@ -22,6 +24,9 @@ public class DialogueSystem : MonoBehaviour
     public float fillDuration = 2f;
     public Image fillImage;
     public Button calibrateButton;
+
+    [SerializeField] private string openaiApiKey = "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";
+    private const string apiUrl = "https://api.openai.com/v1/chat/completions";
 
     [Header("Settings")]
     public float typingSpeed = 0.05f;
@@ -49,21 +54,27 @@ public class DialogueSystem : MonoBehaviour
             yield return null;
         }
 
+        elapsed = 0f;
         fillImage.fillAmount = 0f;
+        splineControlSystem.ResetToOriginalPositions(fillDuration - 0.2f);
+        while (elapsed < fillDuration)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
         calibrateButtonPressed = false;
         splineControlSystem.SetVisible();
-        splineControlSystem.ResetToOriginalPositions();
     }
 
     void Update()
     {
-        if (!dialogueActive) return;
+        //if (!dialogueActive) return;
 
         // Skip typing animation
-        if (isTyping && !showingChoices && calibrateButtonPressed)
+        if (calibrateButtonPressed)
         {
-            StopAllCoroutines();
-            DisplayFullResponse();
+            //StopAllCoroutines();
+           // DisplayFullResponse();
             StartCoroutine(FillImageAndWait());
         }
         // Advance after response text
@@ -105,7 +116,7 @@ public class DialogueSystem : MonoBehaviour
 
     void ShowCurrentLineChoices()
     {
-        calibrateButton.interactable = false;
+        //calibrateButton.interactable = false;
         if (currentLineIndex >= currentDialogue.lines.Length)
         {
             EndDialogue();
@@ -131,7 +142,7 @@ public class DialogueSystem : MonoBehaviour
         }
 
         isTyping = false;
-        if(text != "") calibrateButton.interactable = true;
+        //if(text != "") calibrateButton.interactable = true;
         if (showChoicesAfter)
         {
             // Show choices after main line is done typing
@@ -227,7 +238,7 @@ public class DialogueSystem : MonoBehaviour
 
         isTyping = false;
         waitingForAdvance = true;
-        calibrateButton.interactable = true;
+        //calibrateButton.interactable = true;
         // Wait for calibrate button press
         yield return new WaitUntil(() => calibrateButtonPressed);
         yield return StartCoroutine(FillImageAndWait());

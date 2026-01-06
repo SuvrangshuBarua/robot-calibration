@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
@@ -18,12 +19,20 @@ public class SplineControlSystem : MonoBehaviour
     [SerializeField] private bool enableRuntimeManipulation = true;
     [SerializeField] private float handleSize = 0.5f;
     [SerializeField] private Sprite handleSprite; // Assign in inspector
-    [SerializeField] private Color handleColor = new Color(1f, 1f, 0f, 0.7f);
-    [SerializeField] private Color selectedHandleColor = new Color(0f, 1f, 0f, 0.7f);
+    [SerializeField] private Color handleColor = new Color(1f, 1f, 0f, 0.0f);
+    [SerializeField] private Color selectedHandleColor = new Color(0f, 1f, 0f, 0.0f);
     [SerializeField] private int sortingOrder = 100; // Higher values render on top
     [SerializeField] private string sortingLayerName = "Default";
     [SerializeField] private bool debugMode = false;
-    
+
+    [Header("Drag Constraints")]
+    [SerializeField] private float maxDragRadius = 1.5f; // world units
+
+    [Header("Implicit Dragging")]
+    [SerializeField] private float bonePickRadius = 0.3f; // world units
+
+    private Vector3 dragStartWorldPos;
+
     private SplineContainer splineContainer;
     private Spline spline;
     private Dictionary<int, Transform> knotToBoneMap = new Dictionary<int, Transform>();
@@ -36,6 +45,8 @@ public class SplineControlSystem : MonoBehaviour
     private Dictionary<int, Vector3> originalKnotPositions = new Dictionary<int, Vector3>();
     private Dictionary<int, BezierKnot> originalKnotData = new Dictionary<int, BezierKnot>();
     private float handleOpacity = 0.0f;
+
+    private float fillDurationFallback = 0.5f;
 
     void Start()
     {
@@ -257,55 +268,76 @@ public class SplineControlSystem : MonoBehaviour
 
     private void HandleInput()
     {
-        if (mainCamera == null) return;
+        if (mainCamera == null || spline == null) return;
 
-        // Mouse down - select handle (using 2D raycasting)
+        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+        mouseWorldPos.z = 0f;
+
+        // ------------------------
+        // Mouse Down: pick nearest knot
+        // ------------------------
         if (Input.GetMouseButtonDown(0))
         {
-            Vector2 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+            selectedHandleIndex = FindClosestKnot(mouseWorldPos, bonePickRadius);
 
-            if (hit.collider != null)
+            if (selectedHandleIndex >= 0)
             {
+                BezierKnot knot = spline[selectedHandleIndex];
+                dragStartWorldPos = transform.TransformPoint(knot.Position);
+                dragStartWorldPos.z = 0f;
+
                 if (debugMode)
                 {
-                    Debug.Log($"2D Raycast hit: {hit.collider.gameObject.name}");
-                }
-                
-                SplineHandle handleScript = hit.collider.GetComponent<SplineHandle>();
-                if (handleScript != null && handleScript.Controller == this)
-                {
-                    selectedHandleIndex = handleScript.KnotIndex;
-                    UpdateHandleColors();
-                    
-                    if (debugMode)
-                    {
-                        Debug.Log($"Selected handle: {selectedHandleIndex}");
-                    }
+                    Debug.Log($"Picked knot {selectedHandleIndex}");
                 }
             }
         }
 
-        // Mouse up - deselect
+        // ------------------------
+        // Mouse Drag
+        // ------------------------
+        if (Input.GetMouseButton(0) && selectedHandleIndex >= 0)
+        {
+            Vector3 offset = mouseWorldPos - dragStartWorldPos;
+
+            // Clamp drag radius (your existing safety net)
+            if (offset.magnitude > maxDragRadius)
+            {
+                offset = offset.normalized * maxDragRadius;
+            }
+
+            Vector3 constrainedPos = dragStartWorldPos + offset;
+            SetKnotPosition(selectedHandleIndex, constrainedPos);
+        }
+
+        // ------------------------
+        // Mouse Up
+        // ------------------------
         if (Input.GetMouseButtonUp(0))
         {
             selectedHandleIndex = -1;
-            UpdateHandleColors();
+        }
+    }
+
+    private int FindClosestKnot(Vector3 mouseWorldPos, float maxDistance)
+    {
+        int closestIndex = -1;
+        float closestSqrDist = maxDistance * maxDistance;
+
+        for (int i = 0; i < spline.Count; i++)
+        {
+            Vector3 knotWorldPos = transform.TransformPoint(spline[i].Position);
+            knotWorldPos.z = 0f;
+
+            float sqrDist = (mouseWorldPos - knotWorldPos).sqrMagnitude;
+            if (sqrDist <= closestSqrDist)
+            {
+                closestSqrDist = sqrDist;
+                closestIndex = i;
+            }
         }
 
-        // Mouse drag - move selected handle
-        if (Input.GetMouseButton(0) && selectedHandleIndex >= 0)
-        {
-            Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-            mouseWorldPos.z = 0f; // Keep in 2D plane
-            
-            if (debugMode)
-            {
-                Debug.Log($"Dragging handle {selectedHandleIndex} to {mouseWorldPos}");
-            }
-            
-            SetKnotPosition(selectedHandleIndex, mouseWorldPos);
-        }
+        return closestIndex;
     }
 
     private void UpdateHandleColors()
@@ -511,10 +543,15 @@ public class SplineControlSystem : MonoBehaviour
 
     public void SetVisible()
     {
-        handleColor.a = 0.06f;
+        handleColor.a = 0;
         UpdateHandleColors();
     }
 
+    public void ResetToOriginalPositions(float duration)
+    {
+        fillDurationFallback = Mathf.Max(0.01f, duration);
+        ResetToOriginalPositions();
+    }
 
     public void ResetToOriginalPositions()
     {
@@ -524,43 +561,83 @@ public class SplineControlSystem : MonoBehaviour
             return;
         }
 
-        if (debugMode)
-        {
-            Debug.Log("Resetting all knots to original positions...");
-        }
+        StopAllCoroutines();
+        StartCoroutine(ResetSplineTween());
+    }
 
-        // Reset each knot to its original state
+    private IEnumerator ResetSplineTween()
+    {
+        float duration = fillDurationFallback;
+        float elapsed = 0f;
+
+        // Cache starting state
+        Dictionary<int, BezierKnot> startKnots = new Dictionary<int, BezierKnot>();
+
         for (int i = 0; i < spline.Count; i++)
         {
-            if (originalKnotData.ContainsKey(i))
+            startKnots[i] = spline[i];
+        }
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            for (int i = 0; i < spline.Count; i++)
             {
-                BezierKnot originalKnot = originalKnotData[i];
-                spline.SetKnot(i, originalKnot);
-                
-                // Update the corresponding bone
-                if (knotToBoneMap.ContainsKey(i) && originalKnotPositions.ContainsKey(i))
+                if (!originalKnotData.ContainsKey(i)) continue;
+
+                BezierKnot from = startKnots[i];
+                BezierKnot to = originalKnotData[i];
+
+                BezierKnot blended = from;
+                blended.Position = Vector3.Lerp(from.Position, to.Position, t);
+                blended.TangentIn = Vector3.Lerp(from.TangentIn, to.TangentIn, t);
+                blended.TangentOut = Vector3.Lerp(from.TangentOut, to.TangentOut, t);
+
+                spline.SetKnot(i, blended);
+
+                // Update bone
+                if (knotToBoneMap.TryGetValue(i, out Transform bone))
                 {
-                    Transform bone = knotToBoneMap[i];
-                    if (bone != null)
-                    {
-                        bone.position = originalKnotPositions[i];
-                    }
+                    bone.position = transform.TransformPoint(blended.Position);
                 }
-                
-                // Update handle position
+
+                // Update handle visuals
                 if (enableRuntimeManipulation)
                 {
                     UpdateHandlePosition(i);
                 }
             }
+
+            splineContainer.Spline = spline;
+            yield return null;
         }
 
-        // Force update the spline container
+        // Snap to exact original state at the end (precision safety)
+        for (int i = 0; i < spline.Count; i++)
+        {
+            if (!originalKnotData.ContainsKey(i)) continue;
+
+            spline.SetKnot(i, originalKnotData[i]);
+
+            if (knotToBoneMap.TryGetValue(i, out Transform bone) &&
+                originalKnotPositions.TryGetValue(i, out Vector3 pos))
+            {
+                bone.position = pos;
+            }
+
+            if (enableRuntimeManipulation)
+            {
+                UpdateHandlePosition(i);
+            }
+        }
+
         splineContainer.Spline = spline;
-        
+
         if (debugMode)
         {
-            Debug.Log("Reset complete!");
+            Debug.Log("Spline reset tween complete");
         }
     }
 
